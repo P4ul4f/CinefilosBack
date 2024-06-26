@@ -42,11 +42,7 @@ public class JwtUtils {
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(","));
 
-        /*Long userId = null;
-        if (authentication.getUser() instanceof User) {
-            userId = ((User) authentication.getUserId();
-        }
-*/
+
 
         String jwtToken = JWT.create()
                 .withIssuer(this.userGenerator)

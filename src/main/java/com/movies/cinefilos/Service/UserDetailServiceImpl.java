@@ -62,6 +62,19 @@ public class UserDetailServiceImpl implements UserDetailsService {
                 user.isCredentialsNonExpired(), user.isAccountNonExpired(), authorityList);
     }
 
+    public Long getUserIdFromUsername(String username) {
+        // Obtener el usuario desde el repositorio
+        Optional<User> userOptional = userRepository.findUserByUsername(username);
+
+        // Verificar si el usuario existe en el Optional
+        if (userOptional.isPresent()) {
+            User user = userOptional.get(); // Obtener el usuario del Optional
+            return user.getId(); // Devolver el ID del usuario
+        } else {
+            return null; // Si no se encuentra el usuario, devolver null
+        }
+    }
+
     public AuthResponse loginUser(AuthLoginRequest authLoginRequest) {
         String username = authLoginRequest.username();
         String password = authLoginRequest.password();
@@ -148,5 +161,13 @@ public class UserDetailServiceImpl implements UserDetailsService {
 
         AuthResponse authResponse = new AuthResponse(username, "User created successfully", accessToken, true, userId);
         return authResponse;
+    }
+
+    public User getLoggedInUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+
+        return userRepository.findUserByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
     }
 }

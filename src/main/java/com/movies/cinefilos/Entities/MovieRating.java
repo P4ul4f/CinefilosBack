@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
+
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
@@ -26,4 +28,19 @@ public class MovieRating {
 
     @Column(nullable = false)
     private Boolean liked;
+
+    @Column(nullable = false)
+    private LocalDate ratingDate;
+
+
+    public Boolean getLiked() {
+        return liked;
+    }
+
+    public void setLiked(Boolean liked) {
+        this.liked = liked;
+    }
+
+
+
 }
