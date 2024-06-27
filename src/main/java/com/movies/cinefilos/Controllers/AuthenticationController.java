@@ -81,6 +81,31 @@ public class AuthenticationController {
         }
     }
 
+    // RESET PASSWORD
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest resetPasswordRequest) {
+        try {
+            // Validar que el usuario existe y verificar la contraseña actual
+            String username = resetPasswordRequest.getUsername();
+            String currentPassword = resetPasswordRequest.getCurrentPassword();
+            String newPassword = resetPasswordRequest.getNewPassword();
+
+            AuthLoginRequest loginRequest = new AuthLoginRequest(username, currentPassword);
+            Authentication authentication = userDetailServiceImpl.authenticate(username, currentPassword);
+            if (authentication == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Credenciales incorrectas");
+            }
+
+            // Cambiar la contraseña
+            userDetailServiceImpl.changePassword(username, newPassword);
+
+            return ResponseEntity.ok("Contraseña cambiada exitosamente");
+
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al cambiar la contraseña");
+        }
+    }
+
     //Obtener los datos del usuario por su id
     @GetMapping("/details")
     public ResponseEntity<Object> getUserDetails() {

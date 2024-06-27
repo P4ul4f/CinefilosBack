@@ -170,4 +170,16 @@ public class UserDetailServiceImpl implements UserDetailsService {
         return userRepository.findUserByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
     }
+
+    // Método para cambiar la contraseña del usuario
+    public void changePassword(String username, String newPassword) {
+        User user = userRepository.findUserByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+
+        // Encriptar la nueva contraseña
+        user.setPassword(passwordEncoder.encode(newPassword));
+
+        // Guardar el usuario actualizado en la base de datos
+        userRepository.save(user);
+    }
 }
