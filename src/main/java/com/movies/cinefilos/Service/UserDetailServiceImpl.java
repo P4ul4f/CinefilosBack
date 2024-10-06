@@ -182,4 +182,38 @@ public class UserDetailServiceImpl implements UserDetailsService {
         // Guardar el usuario actualizado en la base de datos
         userRepository.save(user);
     }
+
+    public void changeUsername(String currentUsername, String newUsername) {
+        User user = userRepository.findUserByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado."));
+
+        user.setUsername(newUsername);
+        userRepository.save(user);
+    }
+
+    public void changePassword(String username, String currentPassword, String newPassword) {
+        User user = userRepository.findUserByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado."));
+
+        // Verificar que la contraseña actual sea correcta
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new RuntimeException("Contraseña actual incorrecta.");
+        }
+
+        // Cambiar la contraseña
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
+    public boolean usernameExists(String username) {
+        return userRepository.existsByUsername(username);
+    }
+
+    public List<Role> findRolesByRoleEnums(List<RoleEnum> roleEnums) {
+        return roleRepository.findRolesByRoleEnumIn(roleEnums);
+    }
+
+    public Optional<Role> findRoleByRoleEnum(RoleEnum roleEnum) {
+        return roleRepository.findRoleByRoleEnum(roleEnum);
+    }
 }

@@ -1,10 +1,9 @@
 package com.movies.cinefilos.Controllers;
 
 import com.movies.cinefilos.DTO.*;
-import com.movies.cinefilos.Entities.FavoriteMovie;
-import com.movies.cinefilos.Entities.MovieRating;
-import com.movies.cinefilos.Entities.User;
+import com.movies.cinefilos.Entities.*;
 import com.movies.cinefilos.Repositories.MovieRatingRepository;
+import com.movies.cinefilos.Repositories.RoleRepository;
 import com.movies.cinefilos.Repositories.UserRepository;
 import com.movies.cinefilos.Service.FavoriteMovieService;
 import com.movies.cinefilos.Service.MovieRatingService;
@@ -26,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -52,6 +52,9 @@ public class AuthenticationController {
     private FavoriteMovieService favoriteMovieService;
     @Autowired
     private MovieRatingRepository movieRatingRepository;
+
+    @Autowired
+    RoleRepository roleRepository;
 
     //LOGIN
     @PostMapping("/log-in")
@@ -106,6 +109,40 @@ public class AuthenticationController {
         }
     }
 
+    @PostMapping("/change-username")
+    public ResponseEntity<?> changeUsername(@RequestBody ChangeUsernameRequest changeUsernameRequest) {
+        try {
+            String newUsername = changeUsernameRequest.getNewUsername();
+
+            // Obtener el nombre de usuario actualmente autenticado
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUsername = authentication.getName();
+
+            // Validar que el nuevo nombre de usuario no esté en uso
+            if (userDetailServiceImpl.usernameExists(newUsername)) {
+                return ResponseEntity.badRequest().body("El nuevo nombre de usuario ya está en uso.");
+            }
+
+            // Cambiar el nombre de usuario
+            userDetailServiceImpl.changeUsername(currentUsername, newUsername);
+
+            return ResponseEntity.ok("Nombre de usuario cambiado exitosamente.");
+
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al cambiar el nombre de usuario.");
+        }
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<String> changePassword(@RequestBody ChangePasswordRequest changePasswordRequest) {
+        try {
+            userDetailServiceImpl.changePassword(changePasswordRequest.getUsername(), changePasswordRequest.getCurrentPassword(), changePasswordRequest.getNewPassword());
+            return ResponseEntity.ok("Contraseña cambiada exitosamente");
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al cambiar la contraseña: " + ex.getMessage());
+        }
+    }
+
     //Obtener los datos del usuario por su id
     @GetMapping("/details")
     public ResponseEntity<Object> getUserDetails() {
@@ -120,6 +157,30 @@ public class AuthenticationController {
 
             // Construye el DTO con los detalles del usuario
             UserDetailsDTO userDetailsDTO = new UserDetailsDTO(username, userRole, registrationDate);
+
+            return ResponseEntity.ok(userDetailsDTO);
+        } catch (UsernameNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping("/user-details")
+    public ResponseEntity<UserDetailsDTO> getUserDetails2() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+
+            User user = userRepository.findUserByUsername(username)
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
+
+            String userRole = user.getRoles().stream()
+                    .map(Role::getRoleName)
+                    .findFirst()
+                    .orElse("USER");
+
+            UserDetailsDTO userDetailsDTO = new UserDetailsDTO(username, userRole, user.getRegistrationDate());
 
             return ResponseEntity.ok(userDetailsDTO);
         } catch (UsernameNotFoundException e) {
@@ -182,6 +243,65 @@ public class AuthenticationController {
         List<Long> topRatedMovies = movieRatingService.getAllTopRatedMovies(); // Suponiendo que hay un método para obtener todas las películas mejor valoradas
         return ResponseEntity.ok(topRatedMovies);
     }
+
+    @GetMapping("/users")
+    public ResponseEntity<List<User>> getAllUsers() {
+        try {
+            List<User> users = userRepository.findAll();
+            return ResponseEntity.ok(users);
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @PutMapping("/users/{userId}/role")
+    public ResponseEntity<?> addRoleToUser(@PathVariable Long userId, @RequestBody String roleName) {
+        System.out.println("Nombre de rol recibido: " + roleName);
+        try {
+            Optional<User> optionalUser = userRepository.findById(userId);
+            if (!optionalUser.isPresent()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            User user = optionalUser.get();
+
+            // Validar y convertir el nombre del rol a RoleEnum
+            RoleEnum roleEnum;
+            try {
+                roleEnum = RoleEnum.valueOf(roleName);
+            } catch (IllegalArgumentException ex) {
+                return ResponseEntity.badRequest().body("Nombre de rol inválido: " + roleName);
+            }
+
+            // Buscar el rol por el enum
+            Optional<Role> optionalRole = roleRepository.findRoleByRoleEnum(roleEnum);
+            if (!optionalRole.isPresent()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Role role = optionalRole.get();
+
+            // Agregar el nuevo rol al usuario
+            user.addRole(role);
+            userRepository.save(user);
+
+            return ResponseEntity.ok("Rol añadido al usuario correctamente");
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al añadir el rol al usuario");
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 }
